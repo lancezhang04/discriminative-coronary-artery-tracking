@@ -1,10 +1,12 @@
-from tensorflow.keras.layers import Input, Conv3D, BatchNormalization, Activation, Flatten, Concatenate
+from tensorflow.keras.layers import Input, Conv3D, BatchNormalization, Activation, Flatten, Lambda
 from tensorflow.keras import Model, backend
 from tensorflow.keras.losses import mean_squared_error, categorical_crossentropy, binary_crossentropy
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
 
 IMAGE_FORMAT = backend.image_data_format()
+BETA = 1
+LAMBDA_R = 15
 
 
 def conv_block(input_, n_filters=32, kernel_size=(3, 3, 3), dilation_rate=1, idx="O"):
@@ -50,22 +52,22 @@ def create_model(w=19, D=500, initial_lr=0.001):
     # tracker
     x_t = conv_block(x, 64, (3, 3, 3), 1, idx="5_t")
     x_t = conv_block(x_t, 64, (1, 1, 1), 1, idx="6_t")
-    x_t = Conv3D(D+1, (1, 1, 1), dilation_rate=1, name="conv7_t")(x_t)
+    x_t = Conv3D(D + 1, (1, 1, 1), dilation_rate=1, name="conv7_t")(x_t)
     x_t = Flatten(name="flatten_t")(x_t)
-    x_t = final_activation(x_t)
+    x_t = Lambda(final_activation, name="tracker_outputs")(x_t)
 
     # discriminator
     x_d = conv_block(x, 64, (3, 3, 3), 1, idx="5_d")
     x_d = conv_block(x_d, 64, (1, 1, 1), 1, idx="6_d")
     x_d = Conv3D(1, (1, 1, 1), dilation_rate=1, name="conv7_d", activation="sigmoid")(x_d)
-    x_d = Flatten(name="flatten_d")(x_d)
+    x_d = Flatten(name="discriminator_output")(x_d)
 
-    outputs = Concatenate()([x_d, x_t[0], x_t[1]])
+    outputs = [x_d, x_t[0], x_t[1]]  # the discriminator output, the radius, and the directions respectively
 
     model = Model(inputs=inputs, outputs=outputs)
     schedule = PiecewiseConstantDecay([i * 10000 for i in range(1, 6)], [initial_lr * (0.1 ** i) for i in range(0, 6)])
     optimizer = Adam(learning_rate=schedule)
-    model.compile(optimizer=optimizer, loss=custom_loss)
+    model.compile(optimizer=optimizer, loss=[disc_loss, reg_loss, clf_loss])
     return model
 
 
@@ -84,15 +86,16 @@ def final_activation(input_):
     return [output1, output2]
 
 
-def custom_loss(y_true, y_pred, lambda_r=15, beta=1):
-    """
-    custom loss function that is a combination of mean squared error and categorical cross entropy loss
-    """
+def disc_loss(y_true, y_pred):
+    return BETA * binary_crossentropy(y_true, y_pred)
 
-    disc_loss = beta * binary_crossentropy(y_true[:, :1], y_pred[:, :1])
-    reg_loss = lambda_r * mean_squared_error(y_true[:, 1:2], y_pred[:, 1:2])
-    clf_loss = categorical_crossentropy(y_true[:, 2:], y_pred[:, 2:])
-    return disc_loss + reg_loss + clf_loss
+
+def reg_loss(y_true, y_pred):
+    return LAMBDA_R * mean_squared_error(y_true, y_pred)
+
+
+def clf_loss(y_true, y_pred):
+    return categorical_crossentropy(y_true, y_pred)
 
 
 if __name__ == "__main__":

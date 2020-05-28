@@ -1,27 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import SimpleITK as sitk
+from utils import load_itk, load_points
 from mpl_toolkits.mplot3d import Axes3D
-
-
-def load_itk(filename):
-    itkimage = sitk.ReadImage(filename)
-
-    ct_scan = sitk.GetArrayFromImage(itkimage)
-    ct_scan = ct_scan.transpose(2, 1, 0)
-    origin = np.array(list(reversed(itkimage.GetOrigin())))
-    spacing = np.array(list(reversed(itkimage.GetSpacing())))
-
-    return ct_scan, origin, spacing
-
-
-def load_points(path):
-    with open(path, "r") as file:
-        lines = file.readlines()
-
-    points = [[float(value) for value in line.split(" ")] for line in lines]
-    return np.array(points)
 
 
 def generate_figure(idx):
