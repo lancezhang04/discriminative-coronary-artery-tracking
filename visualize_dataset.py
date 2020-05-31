@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import load_itk, load_points
-from mpl_toolkits.mplot3d import Axes3D
 
 
 def generate_figure(idx):
@@ -26,6 +25,10 @@ def generate_figure(idx):
 
 
 if __name__ == "__main__":
+    """
+    generates 3D visualizations for each of the 8 CTAA images and store them in ./visualizations
+    """
+
     for i in range(8):
         print("\nplotting dataset" + str(i))
         generate_figure(i)

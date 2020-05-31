@@ -1,5 +1,3 @@
-from utils import *
-
 N = 100
 
 if __name__ == "__main__":
