@@ -65,9 +65,7 @@ def create_model(w=19, D=500, initial_lr=0.001):
     outputs = [x_d, x_t[0], x_t[1]]  # the discriminator output, the radius, and the directions respectively
 
     model = Model(inputs=inputs, outputs=outputs)
-    # schedule = PiecewiseConstantDecay([i * 10000 for i in range(1, 6)], [initial_lr * (0.1 ** i) for i in range(0,
-    # 6)])
-    optimizer = Adam(learning_rate=1e-4) # schedule)
+    optimizer = Adam(lr=initial_lr)
     model.compile(optimizer=optimizer, loss=[disc_loss, reg_loss, clf_loss])
     return model
 
